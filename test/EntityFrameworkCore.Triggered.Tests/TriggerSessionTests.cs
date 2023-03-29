@@ -17,6 +17,14 @@ namespace EntityFrameworkCore.Triggered.Tests
         {
             public int Id { get; set; }
             public string Name { get; set; }
+            public OwnedModel Owned { get; set; } = new();
+        }
+
+        [Owned]
+        public class OwnedModel
+        {
+            public int Id { get; set; }
+            public string Email { get; set; }
         }
 
         public class TestDbContext : DbContext
@@ -493,6 +501,56 @@ namespace EntityFrameworkCore.Triggered.Tests
             Assert.Equal(ChangeType.Modified, _capturedTriggerContext.ChangeType);
             Assert.Equal("test1", _capturedTriggerContext.UnmodifiedEntity.Name);
             Assert.Equal("test2", _capturedTriggerContext.Entity.Name);
+        }
+
+        [Fact]
+        public void RaiseAfterSaveTriggers_Owned_ModifiedEntity_Raises()
+        {
+          ITriggerContext<TestModel> _capturedTriggerContext = null;
+
+          var trigger = new TriggerStub<TestModel> {
+            AfterSaveHandler = context => {
+              _capturedTriggerContext = context;
+            }
+          };
+
+          var serviceProvider = new ServiceCollection()
+              .AddSingleton<IAfterSaveTrigger<TestModel>>(trigger)
+              .AddTriggeredDbContext<TestDbContext>(options => {
+                options.UseInMemoryDatabase("Test");
+                options.ConfigureWarnings(warningOptions => {
+                  warningOptions.Ignore(CoreEventId.ManyServiceProvidersCreatedWarning);
+                });
+              })
+              .BuildServiceProvider();
+
+          var scope = serviceProvider.CreateScope();
+          var dbContext = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+          var subject = CreateSubject(dbContext);
+          var testModel = new TestModel { 
+            Id = 1, 
+            Name = "test1",
+            Owned = new() {
+              Id = 2,
+              Email = "test2"
+            }
+          };
+
+          dbContext.TestModels.Add(testModel);
+          dbContext.SaveChanges();
+
+          // act
+
+          testModel.Owned.Email = "updated";
+
+          subject.DiscoverChanges();
+          dbContext.SaveChanges();
+          subject.RaiseAfterSaveTriggers();
+
+          // assert
+
+          Assert.NotNull(_capturedTriggerContext);
+          Assert.Equal(ChangeType.Modified, _capturedTriggerContext.ChangeType);
         }
 
         [Fact]
