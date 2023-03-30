@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace EntityFrameworkCore.Triggered.Tests.Stubs
 {
@@ -10,5 +11,7 @@ namespace EntityFrameworkCore.Triggered.Tests.Stubs
         public TEntity Entity { get; set; }
         public TEntity UnmodifiedEntity { get; set; }
         public IDictionary<object, object> Items { get; set; }
+
+        public EntityEntry EntityEntry { get; }
     }
 }

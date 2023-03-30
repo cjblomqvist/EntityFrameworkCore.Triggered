@@ -66,6 +66,34 @@ namespace EntityFrameworkCore.Triggered.Internal
                 startIndex = _discoveredChanges.Count;
             }
 
+      //var ownedChangedEntries = entries.Where(entry => {
+      //  var changeType = ResolveChangeType(entry);
+
+      //  if (changeType is null)
+      //    return false;
+
+      //  return entry.Metadata.IsOwned();
+      //}).ToList();
+
+      //foreach(var entry in ownedChangedEntries)
+      //{
+      //  var ownership = entry.Metadata.FindOwnership()!;
+      //  var navigation = ownership.GetNavigation(false)!;
+      //  var type = navigation.DeclaringType.ClrType;
+      //  var propertyName = navigation.Name;
+      //  var property = type.GetProperty(propertyName)!;
+
+      //  var newEntries = _changeTracker.Entries();
+
+      //  var ownerTypeEntries = newEntries.Where(e => e.Entity.GetType() == type);
+      //  var ownerEntry = ownerTypeEntries.FirstOrDefault(e => property.GetValue(e.Entity) == entry.Entity);
+
+      //  if (ownerEntry is not null && ownerEntry.State == EntityState.Unchanged)
+      //  {
+      //    ownerEntry.State = EntityState.Modified;
+      //  }
+      //}
+
             foreach (var entry in entries)
             {
                 var changeType = ResolveChangeType(entry);
@@ -97,6 +125,25 @@ namespace EntityFrameworkCore.Triggered.Internal
                     var triggerContextDescriptor = new TriggerContextDescriptor(entry, changeType.Value);
 
                     _discoveredChanges.Add(triggerContextDescriptor!);
+
+            //        if(entry.Metadata.IsOwned())
+            //        {
+            //var ownership = entry.Metadata.FindOwnership()!;
+            //var navigation = ownership.GetNavigation(false)!;
+            //var type = navigation.DeclaringType.ClrType;
+            //var propertyName = navigation.Name;
+            //var property = type.GetProperty(propertyName)!;
+
+            //var newEntries = _changeTracker.Entries();
+
+            //var ownerTypeEntries = newEntries.Where(e => e.Entity.GetType() == type);
+            //var ownerEntry = ownerTypeEntries.FirstOrDefault(e => property.GetValue(e.Entity) == entry.Entity);
+
+            //if(ownerEntry is not null && ownerEntry.State == EntityState.Unchanged)
+            //{
+            //  ownerEntry.State = EntityState.Modified;
+            //}
+            //        }
                 }
             }
 

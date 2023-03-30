@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace EntityFrameworkCore.Triggered
 {
@@ -24,5 +25,7 @@ namespace EntityFrameworkCore.Triggered
         /// Gets or sets a key/value collection that can be used to share data within the scope of this Entity
         /// </summary>
         IDictionary<object, object> Items { get; }
+
+        EntityEntry EntityEntry { get; }
     }
 }

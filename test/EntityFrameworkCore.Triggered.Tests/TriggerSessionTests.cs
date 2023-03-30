@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using EntityFrameworkCore.Triggered.Tests.Stubs;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
@@ -507,15 +509,25 @@ namespace EntityFrameworkCore.Triggered.Tests
         public void RaiseAfterSaveTriggers_Owned_ModifiedEntity_Raises()
         {
           ITriggerContext<TestModel> _capturedTriggerContext = null;
+          ITriggerContext<OwnedModel> _capturedTriggerContext2 = null;
 
-          var trigger = new TriggerStub<TestModel> {
+      var trigger = new TriggerStub<TestModel> {
             AfterSaveHandler = context => {
               _capturedTriggerContext = context;
             }
           };
 
+      var trigger2 = new TriggerStub<OwnedModel> {
+        AfterSaveHandler = context => {
+          AfterSaveHandler(context);
+          
+          _capturedTriggerContext2 = context;
+        }
+      };
+
           var serviceProvider = new ServiceCollection()
               .AddSingleton<IAfterSaveTrigger<TestModel>>(trigger)
+              .AddSingleton<IAfterSaveTrigger<OwnedModel>>(trigger2)
               .AddTriggeredDbContext<TestDbContext>(options => {
                 options.UseInMemoryDatabase("Test");
                 options.ConfigureWarnings(warningOptions => {
@@ -536,6 +548,27 @@ namespace EntityFrameworkCore.Triggered.Tests
             }
           };
 
+      void AfterSaveHandler(ITriggerContext<OwnedModel> context)
+      {
+        var entry = context.EntityEntry;
+
+        var ownership = entry.Metadata.FindOwnership()!;
+        var navigation = ownership.GetNavigation(false)!;
+        var type = navigation.DeclaringType.ClrType;
+        var propertyName = navigation.Name;
+        var property = type.GetProperty(propertyName)!;
+
+        var newEntries = dbContext.ChangeTracker.Entries();
+
+        var ownerTypeEntries = newEntries.Where(e => e.Entity.GetType() == type);
+        var ownerEntry = ownerTypeEntries.FirstOrDefault(e => property.GetValue(e.Entity) == entry.Entity);
+
+        if (ownerEntry is not null && ownerEntry.State == EntityState.Unchanged)
+        {
+          ownerEntry.State = EntityState.Modified;
+        }
+      }
+
           dbContext.TestModels.Add(testModel);
           dbContext.SaveChanges();
 
@@ -547,7 +580,9 @@ namespace EntityFrameworkCore.Triggered.Tests
           dbContext.SaveChanges();
           subject.RaiseAfterSaveTriggers();
 
-          // assert
+      // assert
+
+      var properties = _capturedTriggerContext2.EntityEntry.Properties.GetEnumerator();
 
           Assert.NotNull(_capturedTriggerContext);
           Assert.Equal(ChangeType.Modified, _capturedTriggerContext.ChangeType);

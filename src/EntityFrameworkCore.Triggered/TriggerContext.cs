@@ -47,5 +47,7 @@ namespace EntityFrameworkCore.Triggered
         public IDictionary<object, object> Items => _entityBagStateManager.GetForEntity(_entityEntry.Entity);
 
         public EntityEntry<TEntity> Entry => (EntityEntry<TEntity>)_entityEntry;
-    }
+
+        public EntityEntry EntityEntry => _entityEntry;
+  }
 }
